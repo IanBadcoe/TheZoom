@@ -99,8 +99,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Centre: {fileID: 2818788773927571419}
   CanvasGroup: {fileID: 7682831714743843221}
-  UseBackgroundColour: 1
-  BackgroundColour: {r: 0.943, g: 0.8916691, b: 0.66198605, a: 1}
+  InLength: 0
+  LiveLength: 0
+  OutLength: 0
+  RotationRate: -60
+  ScaleRate: 1
 --- !u!225 &7682831714743843221
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -140,8 +143,8 @@ RectTransform:
   m_GameObject: {fileID: 5309374030025858009}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 2818788774745585332}
   m_RootOrder: 0
@@ -149,7 +152,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 500, y: 500}
+  m_SizeDelta: {x: 2000, y: 2000}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8904643634392020373
 CanvasRenderer:
@@ -181,11 +184,11 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 64
+    m_FontSize: 256
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 0
-    m_MaxSize: 64
+    m_MaxSize: 256
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1

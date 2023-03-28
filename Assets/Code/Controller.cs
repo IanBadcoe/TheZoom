@@ -14,8 +14,10 @@ namespace Code
         public Color PrevBackgroundColour;
         public float StartDelay;
 
-        float StartTime;
-        float LastTime;
+        float RelativeTime;
+
+        bool Running = false;
+        bool Escaping = false;
 
         // Use this for initialization
         void Start()
@@ -53,13 +55,37 @@ namespace Code
                 t.SetParent(transform);
                 t.SetParent(Container.transform);
             }
-
-            StartTime = Time.time;
         }
 
         void Update()
         {
-            LastTime = Time.time - StartTime;
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                Running = !Running;
+            }
+
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (Escaping)
+                {
+                    Application.Quit();
+                }
+                else
+                {
+                    Escaping = true;
+                }
+            }
+            else if (Input.anyKeyDown)
+            {
+                Escaping = false;
+            }
+
+            if (!Running)
+            {
+                return;
+            }
+
+            RelativeTime += Time.deltaTime;
 
             foreach (Transform t in Container.transform)
             {
@@ -68,7 +94,7 @@ namespace Code
                 if (z != null)
                 {
                     // param == time at the moment...
-                    z.SetInterp(LastTime);
+                    z.SetInterp(RelativeTime);
                 }
             }
         }

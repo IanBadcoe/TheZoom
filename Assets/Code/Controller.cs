@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 using System.Collections.Generic;
+using System;
+using DG.Tweening;
 
 namespace Code
 {
@@ -12,21 +14,30 @@ namespace Code
         public GameObject Container;
         public Image Background;
         public Color PrevBackgroundColour;
-        public float StartDelay;
 
-        float RelativeTime;
+        // just public for ease of debugging...
+        public float RelativeTime = 0;
+        public float TimeRate = 0.125f;
 
         bool Running = false;
         bool Escaping = false;
 
+        public Transform TrackingTransform1;
+        public Transform TrackingTransform2;
+        public float TrackFrac1 = 0;
+        public float TrackFrac2 = 0;
+        public float TrackRate = 0.02f;
+
         // Use this for initialization
         void Start()
         {
-            // "param" is going to be a function of time, maybe just linear time
+            // zoom is going to be a function of time, maybe just linear time
             // but for clarity keep the name separate
-            float cumulative_start_param = -1;
+            float cumulative_start_zoom = 0;
 
-            List<Transform> transforms = new List<Transform>();
+            Zoomer prev_layer = null;
+
+            int index = 0;
 
             foreach (Transform t in Container.transform)
             {
@@ -34,26 +45,20 @@ namespace Code
 
                 if (z != null)
                 {
-                    if (cumulative_start_param == -1)
+                    // add our total live time to the running total
+                    cumulative_start_zoom += z.SetZoomOffset(cumulative_start_zoom,
+                        (RectTransform)prev_layer?.ChildLocation.transform,
+                        ((RectTransform)Container.transform).rect,
+                        index);
+
+                    index += 1;
+                    prev_layer = z;
+
+                    if (TrackingTransform1 == null)
                     {
-                        // make the start delay happen fully before the initial fade in
-                        // later fades overlap the preceding period
-                        cumulative_start_param = StartDelay + z.InLength;
+                        TrackingTransform1 = z.transform;
                     }
-
-                    z.SetParamOffset(cumulative_start_param);
-
-                    // add out total live time to the running total
-                    cumulative_start_param += z.LiveLength;
-
-                    transforms.Insert(0, t);
                 }
-            }
-
-            foreach(Transform t in transforms)
-            {
-                t.SetParent(transform);
-                t.SetParent(Container.transform);
             }
         }
 
@@ -80,23 +85,60 @@ namespace Code
                 Escaping = false;
             }
 
-            if (!Running)
+            if (Running)
             {
-                return;
-            }
+                RelativeTime += Time.deltaTime * TimeRate;
 
-            RelativeTime += Time.deltaTime;
+                Zoomer prev_layer = null;
 
-            foreach (Transform t in Container.transform)
-            {
-                var z = t.GetComponent<Zoomer>();
-
-                if (z != null)
+                foreach (Transform t in Container.transform)
                 {
-                    // param == time at the moment...
-                    z.SetInterp(RelativeTime);
+                    var z = t.GetComponent<Zoomer>();
+
+                    if (z != null && t.gameObject.activeSelf)
+                    {
+                        // zoom == time at the moment...
+                        bool done = z.SetZoom(RelativeTime);
+
+                        prev_layer = z;
+                    }
+                }
+
+                TrackFrac1 += TrackRate;
+                if (TrackFrac1 > 1)
+                {
+                    TrackFrac1 = 1;
+                }
+
+                float interp1 = DG.Tweening.DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
+
+                // We want to get LocationTransform to 0, 0 so we shift the whole container, negatively, by
+                // a proportion of where it currently is...
+
+                Container.transform.position -= TrackingTransform1.position * interp1;
+
+                if (TrackingTransform2 != null) {
+                    float interp2 = DOVirtual.EasedValue(0, 1, TrackFrac2, Ease.InCubic);
+
+                    Container.transform.position -= TrackingTransform2.position * interp2;
+
+                    TrackFrac2 -= TrackRate;
+                    if (TrackFrac2 < 0)
+                    {
+                        TrackFrac2 = 0;
+                        TrackingTransform2 = null;
+                    }
                 }
             }
+        }
+
+        internal void SetTrackingTransform(RectTransform t)
+        {
+            TrackingTransform2 = TrackingTransform1;
+            TrackFrac2 = TrackFrac1;
+
+            TrackingTransform1 = t;
+            TrackFrac1 = 0;
         }
 
         //private void OnGUI()

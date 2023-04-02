@@ -1,7 +1,9 @@
 {
     "name": "Code",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:84b987a4fa37dd84d8e85c76fe397e7f"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

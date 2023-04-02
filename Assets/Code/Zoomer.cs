@@ -9,49 +9,31 @@ namespace Code
     public class Zoomer : MonoBehaviour
     {
         [Header("Our Objects")]
-        public GameObject Centre;
+        public GameObject ChildLocation;
+        public GameObject Text;
         public CanvasGroup CanvasGroup;
+        public Canvas ImageCanvas;
+        public Canvas TextCanvas;
 
-        [Header("Interp Config")]
-        public float InLength;
-        public float LiveLength;
-        public float OutLength;
-
-        [Header("Appearance Params")]
-        //public bool UseBackgroundColour = false;
-        //public Color BackgroundColour = Color.red;
-        public float RotationRate = 1;
-        public float ScaleRate = 1;
-
-        public enum Phase
-        {
-            Unknown,
-
-            Before,
-            In,
-            Live,
-            Out,
-            After
-        }
-
-        public Phase CurrentPhase { get; private set; } = Phase.Unknown;
+        float InLength;          // time over which we fade in, at the end of this our scale is 1
+                                 // and the next zoom can start fading in usingour original size/position as a guide
+        float LiveLength;        // total time we live, including fade-in 
 
         // run params
-        // ParamOffset is the param where we finish fading-in...
+        // ParamOffset is the zoom where we finish fading-in...
+        // our zoom is 1 at this point
         float ParamOffset;
+
+        RectTransform LocationTransform;
         Controller Controller;
 
         // convenience
-        bool Running => CurrentPhase != Phase.Before && CurrentPhase != Phase.After;
-        float StartInParam => ParamOffset - InLength;
-        float EndInParam => ParamOffset;
-        float StartOutParam => ParamOffset + LiveLength;
-        float EndOutParam => StartOutParam + OutLength;
+        float StartInParam => ParamOffset;
+        float EndInParam => ParamOffset + InLength;
+        float EndLiveParam => ParamOffset + LiveLength;
 
-        Tweener Tween;
-
-        float LastParam = -1;
-        float InitRotation;
+        bool Started = false;
+        bool Done = false;
 
         void Start()
         {
@@ -60,12 +42,9 @@ namespace Code
             while (p != null && Controller == null)
             {
                 Controller = p.GetComponent<Controller>();
+
                 p = p.parent;
             }
-
-            Debug.Assert(Controller != null);
-
-            InitRotation = transform.rotation.eulerAngles.y;
 
             // we may have things set wrongly in the overall appearance, to allow easy editing
             // e.g. not _invisible_ but this sets us to the correct sart-of-run state
@@ -79,153 +58,133 @@ namespace Code
 
         // anatomy of a ZoomSegment:
         //
-        //                       InLength    +---LiveLength----+   OutLength
-        //                               \  /|                 |\ /
-        //                                 / |                 | \
-        //                                /  |                 |  \
-        // 0 (e.g. invisible) <----------+   |                 |   +---------->
-        //                                   |
-        //                                   |
-        //                                   |
-        //                        ParamOffset 
+        //                         InLength          InLength of successor 
+        //                        |                 |
+        //                   +----------------+------------------+
+        //                                __..|             __.. |
+        //                            __..    |         __..     |
+        //                        __..        |     __..         |
+        // 0 (e.g. invisible) __..            | __..             | (completely hidden and can be discarded)
+        //                                    |                  |
+        //                                    |                  |
+        //                                    |                  |
+        //                          ZoomOffset                    ZoomOffset of successor
         //
-        // Calling SetOffset adjusts EndInParam (e.g. the start of the full-displayed section)
-        // to new_end_in_param and also adjusts the other three params by the same relative change
-        public void SetParamOffset(float offset)
+        public float SetZoomOffset(float param, RectTransform start_location, Rect whole_screen, int index)
         {
-            ParamOffset = offset;
+            ImageCanvas.sortingOrder = index;
+            TextCanvas.sortingOrder = index + 100;
+
+            ParamOffset = param;
+            // position in this updates as the previous zoomer scales, so we can just take it live
+            LocationTransform = start_location;
+
+            var text_rt = (RectTransform)Text.transform;
+            var h_rt = (RectTransform)transform;
+
+            var start_scale = 0.5f;
+
+            if (start_location != null)
+            {
+                // scale so initially our text fits inside the given child-location
+                start_scale = MathF.Min(
+                    start_location.rect.width / text_rt.rect.width,
+                    start_location.rect.height / text_rt.rect.height);
+            }
+
+            // end when the current text fills the screen on one axis or the other
+            var end_scale = Mathf.Max(
+                whole_screen.width / text_rt.rect.width,
+                whole_screen.height / text_rt.rect.height);
+
+            // During our "In" phase, we zoom from scale to 1
+            // zoom has to be exponential with param
+            // (reason: suppose something occupies 1/2 the screen and zooms to fill the screen,
+            //          suppose also that it contains a nested zoomer which occupies 1/2 the sceen
+            //          when the outer is fully zoomed, the nexted zoomer will take the same time until it
+            //          occupies the whole screen, and during that time the outer zoomer will need to double
+            //          in size again to stay in register with it, therefore:
+            //          time    zoom-outer  zoom-inner (relative zooms)
+            //          0       1           0.5
+            //          1       2           1
+            //          2       4           2
+            //
+            // this means that param and zoom are related by:
+            // zoom = 10.0 ^ param (it doesn't matter what number we use for 10...)
+            //
+            // and the time required to make a zoom change of dZ is:
+            //
+            // dParam = log(dZ)
+
+            // it takes this long to get from the required start size to unity
+            InLength = Mathf.Log10(1 / start_scale);
+            // it takes this long to get from the required start size to fill the screen
+            LiveLength = Mathf.Log10(end_scale / start_scale);
+
+            return InLength;
         }
 
-        // interp from 0-1 is the "in" process
-        //        from 1-2 is the "out" process
-        public void SetInterp(float param)
+        internal void SetDone(bool v)
         {
+            gameObject.SetActive(!v);
+            Done = v;
+        }
+
+        public bool SetZoom(float param)
+        {
+            if (Done)
+            {
+                return true;
+            }
+
+            var ret = false;
+
             if (param < StartInParam)
             {
-                if (Running)
-                {
-                    Reset();
-                }
-
-                CurrentPhase = Phase.Before;
-
-                return;
-            }
-            else if (param > EndOutParam)
-            {
-                if (Running)
-                {
-                    Reset();
-                }
-
-                CurrentPhase = Phase.After;
-
-                return;
+                return false;
             }
 
-            if (param < EndInParam)
+            if (!Started)
             {
-                if (CurrentPhase != Phase.In)
-                {
-                    Reset();
+                Started = true;
 
-                    Tween = InitIn(param);
-                }
-            }
-            else if (param < StartOutParam)
-            {
-                if (CurrentPhase != Phase.Live)
+                if (LocationTransform != null)
                 {
-                    Reset();
-
-                    Tween = InitLive(param);
-                }
-            }
-            else if (param < EndOutParam)
-            {
-                if (CurrentPhase != Phase.Out)
-                {
-                    Reset();
-
-                    Tween = InitOut(param);
+                    Controller.SetTrackingTransform(LocationTransform);
                 }
             }
 
-            float delta_param = param - LastParam;
-            LastParam = param;
-
-            Tween.ManualUpdate(delta_param, delta_param);
-        }
-
-        private Tweener InitIn(float param)
-        {
-            CurrentPhase = Phase.In;
-            LastParam = StartInParam;
-            return DOTween.To(Interpolate, 0, InLength, InLength)
-                .SetEase(Ease.Linear)
-                .SetUpdate(UpdateType.Manual);
-        }
-
-        private Tweener InitLive(float param)
-        {
-            CurrentPhase = Phase.Live;
-            LastParam = EndInParam;
-            return DOTween.To(Interpolate, 0, LiveLength, LiveLength)
-                .SetEase(Ease.Linear)
-                .SetUpdate(UpdateType.Manual);
-        }
-
-        private Tweener InitOut(float param)
-        {
-            CurrentPhase = Phase.Out;
-            LastParam = StartOutParam;
-            return DOTween.To(Interpolate, 0, OutLength, OutLength)
-                .SetEase(Ease.Linear)
-                .SetUpdate(UpdateType.Manual);
-        }
-
-        private void Interpolate(float interp)
-        {
-            float alpha = 1;
-            float scale = 1;
-            float rotation = InitRotation;
-
-            switch (CurrentPhase)
+            if (param >= EndLiveParam)
             {
-                case Phase.In:
-                    alpha = interp / InLength;
-                    rotation = InitRotation + interp;
-                    scale = interp / InLength;
-                    break;
-
-                case Phase.Live:
-                    rotation = InitRotation + InLength + interp;
-                    scale = 1 + interp;
-                    break;
-
-                case Phase.Out:
-                    alpha = 1 - interp / OutLength;
-                    rotation = InitRotation + InLength + LiveLength + interp;
-                    scale = 1 + LiveLength + interp / OutLength;
-                    break;
+                ret = true;
             }
 
-            CanvasGroup.alpha = alpha;
-            transform.rotation = Quaternion.Euler(0, 0, rotation * RotationRate);
-            scale *= ScaleRate;
-            transform.localScale = new Vector3(scale, scale, scale);
-        }
+            // this is 0 at the EndInParam and -ve before that...
+            // meaning we are smaller before the end (scale < 1), and
+            // bigger after (scale > 1)
+            float rel_param = param - EndInParam;
+            var curr_scale = Mathf.Pow(10, rel_param);
 
-        private void Reset()
-        {
-            if (Tween != null)
+            // we really shouldn't be required after reaching this size
+            if (curr_scale > 100)
             {
-                Tween.Complete();
+                SetDone(true);
             }
 
-            Tween = null;
+            var hrt = (RectTransform)transform;
 
-            CurrentPhase = Phase.Unknown;
+            hrt.localScale = new Vector3(curr_scale, curr_scale, 1);
+            // 0 at StartInParam, 1 at EndInParam
+
+            float in_frac = (param - StartInParam) / InLength;
+            CanvasGroup.alpha = Mathf.Clamp01(in_frac);
+
+            if (LocationTransform != null)
+            {
+                hrt.position = LocationTransform.position;
+            }
+
+            return ret;
         }
     }
 }

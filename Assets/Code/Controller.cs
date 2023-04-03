@@ -23,9 +23,7 @@ namespace Code
         bool Escaping = false;
 
         public Transform TrackingTransform1;
-        public Transform TrackingTransform2;
         public float TrackFrac1 = 0;
-        public float TrackFrac2 = 0;
         public float TrackRate = 0.02f;
 
         // Use this for initialization
@@ -110,33 +108,21 @@ namespace Code
                     TrackFrac1 = 1;
                 }
 
-                float interp1 = DG.Tweening.DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
-
                 // We want to get LocationTransform to 0, 0 so we shift the whole container, negatively, by
                 // a proportion of where it currently is...
 
+                // when the tracking position is not (0, 0), we need to scale it
+                // with everything else
+                float scale_change = Mathf.Pow(10, Time.deltaTime * TimeRate);
+                Container.transform.position *= scale_change;
+
+                float interp1 = DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
                 Container.transform.position -= TrackingTransform1.position * interp1;
-
-                if (TrackingTransform2 != null) {
-                    float interp2 = DOVirtual.EasedValue(0, 1, TrackFrac2, Ease.InCubic);
-
-                    Container.transform.position -= TrackingTransform2.position * interp2;
-
-                    TrackFrac2 -= TrackRate;
-                    if (TrackFrac2 < 0)
-                    {
-                        TrackFrac2 = 0;
-                        TrackingTransform2 = null;
-                    }
-                }
             }
         }
 
         internal void SetTrackingTransform(RectTransform t)
         {
-            TrackingTransform2 = TrackingTransform1;
-            TrackFrac2 = TrackFrac1;
-
             TrackingTransform1 = t;
             TrackFrac1 = 0;
         }

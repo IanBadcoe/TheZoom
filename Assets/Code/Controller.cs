@@ -14,6 +14,7 @@ namespace Code
         public GameObject Container;
         public Image Background;
         public Color PrevBackgroundColour;
+        public PaperZoomer PaperZoomer;
 
         // just public for ease of debugging...
         public float RelativeTime = 0;
@@ -43,7 +44,7 @@ namespace Code
             {
                 var z = t.GetComponent<Zoomer>();
 
-                if (z != null)
+                if (z != null && z.gameObject.activeInHierarchy)
                 {
                     // add our total live time to the running total
                     cumulative_start_zoom += z.SetZoomOffset(cumulative_start_zoom,
@@ -89,33 +90,34 @@ namespace Code
             {
                 RelativeTime += Time.deltaTime * TimeRate;
 
-                Zoomer prev_layer = null;
+                PaperZoomer.SetZoom(RelativeTime);
 
                 foreach (Transform t in Container.transform)
                 {
                     var z = t.GetComponent<Zoomer>();
 
-                    if (z != null && t.gameObject.activeSelf)
+                    if (z != null && t.gameObject.activeInHierarchy)
                     {
                         // zoom == time at the moment...
-                        bool done = z.SetZoom(RelativeTime);
-
-                        prev_layer = z;
+                        z.SetZoom(RelativeTime);
                     }
                 }
 
-                TrackFrac1 += TrackRate;
-                if (TrackFrac1 > 1)
+                if (TrackingTransform1 != null)
                 {
-                    TrackFrac1 = 1;
+                    TrackFrac1 += TrackRate;
+                    if (TrackFrac1 > 1)
+                    {
+                        TrackFrac1 = 1;
+                    }
+
+                    float interp1 = DG.Tweening.DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
+
+                    // We want to get LocationTransform to 0, 0 so we shift the whole container, negatively, by
+                    // a proportion of where it currently is...
+
+                    Container.transform.position -= TrackingTransform1.position * interp1;
                 }
-
-                float interp1 = DG.Tweening.DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
-
-                // We want to get LocationTransform to 0, 0 so we shift the whole container, negatively, by
-                // a proportion of where it currently is...
-
-                Container.transform.position -= TrackingTransform1.position * interp1;
 
                 if (TrackingTransform2 != null) {
                     float interp2 = DOVirtual.EasedValue(0, 1, TrackFrac2, Ease.InCubic);
@@ -129,6 +131,9 @@ namespace Code
                         TrackingTransform2 = null;
                     }
                 }
+
+                // move the paper in unity with the zoomers/text
+                PaperZoomer.transform.position = Container.transform.position;
             }
         }
 

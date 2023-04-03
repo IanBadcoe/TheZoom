@@ -12,7 +12,6 @@ namespace Code
         public GameObject ChildLocation;
         public GameObject Text;
         public CanvasGroup CanvasGroup;
-        public Canvas ImageCanvas;
         public Canvas TextCanvas;
 
         float InLength;          // time over which we fade in, at the end of this our scale is 1
@@ -72,7 +71,6 @@ namespace Code
         //
         public float SetZoomOffset(float param, RectTransform start_location, Rect whole_screen, int index)
         {
-            ImageCanvas.sortingOrder = index;
             TextCanvas.sortingOrder = index + 100;
 
             ParamOffset = param;

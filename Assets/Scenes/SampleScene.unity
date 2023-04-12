@@ -755,18 +755,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 142528152035276582, guid: b71eceef09dbc7449863eb6884206975, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 142528152295001716, guid: b71eceef09dbc7449863eb6884206975, type: 3}
       propertyPath: m_Name
       value: SceneController
       objectReference: {fileID: 0}
-    - target: {fileID: 142528152295001718, guid: b71eceef09dbc7449863eb6884206975, type: 3}
-      propertyPath: m_Camera
-      value: 
-      objectReference: {fileID: 519420031}
     - target: {fileID: 142528152295001721, guid: b71eceef09dbc7449863eb6884206975, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -850,10 +842,6 @@ PrefabInstance:
     - target: {fileID: 142528152295001721, guid: b71eceef09dbc7449863eb6884206975, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4968593323403648105, guid: b71eceef09dbc7449863eb6884206975, type: 3}
-      propertyPath: TrackRate
-      value: 0.001
       objectReference: {fileID: 0}
     - target: {fileID: 5129525124832493278, guid: b71eceef09dbc7449863eb6884206975, type: 3}
       propertyPath: m_RootOrder

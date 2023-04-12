@@ -101,6 +101,10 @@ MonoBehaviour:
   Background: {fileID: 0}
   PrevBackgroundColour: {r: 0, g: 0, b: 0, a: 0}
   RelativeTime: 0
+  TimeRate: 0.125
+  TrackingTransform1: {fileID: 0}
+  TrackFrac1: 0
+  TrackRate: 0.001
 --- !u!222 &401016956897188503
 CanvasRenderer:
   m_ObjectHideFlags: 0

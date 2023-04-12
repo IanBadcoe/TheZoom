@@ -54,7 +54,7 @@ namespace Code
 
                     if (TrackingTransform1 == null)
                     {
-                        TrackingTransform1 = z.transform;
+                        TrackingTransform1 = z.ChildLocation.transform;
                     }
                 }
             }
@@ -96,35 +96,55 @@ namespace Code
                     if (z != null && t.gameObject.activeSelf)
                     {
                         // zoom == time at the moment...
-                        bool done = z.SetZoom(RelativeTime);
+                        z.SetZoom(RelativeTime);
 
                         prev_layer = z;
+
+                        if (z.Done)
+                        {
+                            Destroy(z.gameObject);
+                        }
                     }
                 }
-
-                TrackFrac1 += TrackRate;
-                if (TrackFrac1 > 1)
-                {
-                    TrackFrac1 = 1;
-                }
-
-                // We want to get LocationTransform to 0, 0 so we shift the whole container, negatively, by
-                // a proportion of where it currently is...
 
                 // when the tracking position is not (0, 0), we need to scale it
                 // with everything else
                 float scale_change = Mathf.Pow(10, Time.deltaTime * TimeRate);
-                Container.transform.position *= scale_change;
+                Container.transform.position = new Vector3(Container.transform.position.x * scale_change,
+                    Container.transform.position.y * scale_change,
+                    Container.transform.position.z);
 
-                float interp1 = DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
-                Container.transform.position -= TrackingTransform1.position * interp1;
+                // We want to get LocationTransform to 0, 0 so we shift the whole container, negatively, by
+                // a proportion of where it currently is...
+
+                if (TrackingTransform1 != null)
+                {
+                    Container.transform.position = new Vector3(
+                        -TrackingTransform1.position.x,
+                        -TrackingTransform1.position.y,
+                        Container.transform.position.z);
+                    TrackingTransform1 = null;
+                    //TrackFrac1 += TrackRate;
+                    //if (TrackFrac1 > 1)
+                    //{
+                    //    TrackFrac1 = 1;
+                    //}
+
+                    //float interp1 = DOVirtual.EasedValue(0, 1, TrackFrac1, Ease.InCubic);
+                    //Container.transform.position -= TrackingTransform1.position * interp1;
+
+                    //if (interp1 > 0.999f)
+                    //{
+                    //    TrackingTransform1 = null;
+                    //}
+                }
             }
         }
 
         internal void SetTrackingTransform(RectTransform t)
         {
-            TrackingTransform1 = t;
-            TrackFrac1 = 0;
+            //TrackingTransform1 = t;
+            //TrackFrac1 = 0;
         }
 
         //private void OnGUI()

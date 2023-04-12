@@ -33,7 +33,7 @@ namespace Code
         float EndLiveParam => ParamOffset + LiveLength;
 
         bool Started = false;
-        bool Done = false;
+        public bool Done = false;
 
         void Start()
         {
@@ -124,24 +124,18 @@ namespace Code
             return InLength;
         }
 
-        internal void SetDone(bool v)
-        {
-            gameObject.SetActive(!v);
-            Done = v;
-        }
-
-        public bool SetZoom(float param)
+        public void SetZoom(float param)
         {
             if (Done)
             {
-                return true;
+                return;
             }
 
             var ret = false;
 
             if (param < StartInParam)
             {
-                return false;
+                return;
             }
 
             if (!Started)
@@ -154,11 +148,6 @@ namespace Code
                 }
             }
 
-            if (param >= EndLiveParam)
-            {
-                ret = true;
-            }
-
             // this is 0 at the EndInParam and -ve before that...
             // meaning we are smaller before the end (scale < 1), and
             // bigger after (scale > 1)
@@ -168,7 +157,7 @@ namespace Code
             // we really shouldn't be required after reaching this size
             if (curr_scale > 100)
             {
-                SetDone(true);
+                Done = true;
             }
 
             var hrt = (RectTransform)transform;
@@ -183,8 +172,6 @@ namespace Code
             {
                 hrt.position = LocationTransform.position;
             }
-
-            return ret;
         }
     }
 }
